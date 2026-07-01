@@ -1,21 +1,32 @@
 # hit-mcp
 
-MCP server for the HIT ticket management system. Read-only: lists queues, lists/searches tickets, fetches ticket details, and lists ticket templates.
+An MCP server that connects an AI agent (Claude, Cursor, VS Code, etc.) to HIT — Devpeak's ticket management system. Read only: the agent can browse ticket queues, search tickets, read full ticket history, and use ticket templates — but it cannot modify any data.
 
-## Installation
+## Quick start
+
+1. Install the package globally:
+
+   ```bash
+   npm install --global @devpeak/hit-mcp
+   ```
+
+2. Generate an API token in HIT: click your avatar (top right) → **Account settings** → **Security** → **API tokens** → **Create API token**.
+
+3. Configure your MCP client with `HIT_BASE_URL` (your HIT instance, e.g. `https://support.example.com`) and `HIT_API_TOKEN` (the token from step 2). See examples below.
+
+---
+
+### Configuration per client
+
+#### Claude Code
 
 ```bash
-npm install --global @devpeak/hit-mcp
+claude mcp add hit -e HIT_BASE_URL=https://your-domain-here -e HIT_API_TOKEN=your-token -- npx hit-mcp
 ```
 
-This installs the `hit-mcp` command on your `PATH`.
+#### Cursor
 
-You'll need:
-
-- `HIT_BASE_URL` — base URL of your HIT instance (e.g. `https://support.example.com`)
-- `HIT_API_TOKEN` — bearer token, `base64(username:apitoken)` from HIT's `apitokens` table
-
-Point your MCP client at the `hit-mcp` command, e.g. in a client config:
+Add the following to `.cursor/mcp.json`:
 
 ```json
 {
@@ -31,28 +42,17 @@ Point your MCP client at the `hit-mcp` command, e.g. in a client config:
 }
 ```
 
-## Running from source
+#### OpenCode
 
-```bash
-npm install
-npm run build
-```
-
-Copy `.env.example` to `.env` and fill in `HIT_BASE_URL` / `HIT_API_TOKEN`, then:
-
-```bash
-npm start
-```
-
-This starts the server on stdio. Point your MCP client at it with an absolute path instead of the `hit-mcp` command:
+Add a new key under `"mcp"` in `~/.config/opencode/opencode.jsonc`, something like:
 
 ```json
 {
-  "mcpServers": {
-    "hit": {
-      "command": "node",
-      "args": ["/absolute/path/to/hit-mcp/dist/index.js"],
-      "env": {
+  "mcp": {
+    "your-server-name": {
+      "type": "local",
+      "command": ["npx", "hit-mcp"],
+      "environment": {
         "HIT_BASE_URL": "https://support.example.com",
         "HIT_API_TOKEN": "..."
       }
@@ -61,9 +61,45 @@ This starts the server on stdio. Point your MCP client at it with an absolute pa
 }
 ```
 
-## Tools
+---
 
-- `list_queues` — list all support queues the authenticated user has access to.
-- `list_tickets` — list tickets in a queue (open by default, `closed=true` for closed). Supports `search` and pagination via `limit`/`page`. Each ticket includes a `link` to its page in the web UI.
-- `get_ticket` — full details of a single ticket, including description, priority, due date, and a link to the web UI.
-- `list_templates` — list ticket templates available in a queue.
+## What can the agent do?
+
+| Tool | Description |
+|---|---|
+| `list_queues` | List all support queues you have access to — get an overview of which areas (IT, maintenance, administration, etc.) exist. |
+| `list_tickets` | Browse and search tickets in a queue. Filter by open/closed status, search by subject, paginate. Each ticket links to HIT's web interface. |
+| `get_ticket` | Fetch full details of a single ticket — description, priority, due dates, history. |
+| `list_templates` | List ticket templates for a queue — useful for seeing what standard workflows are available. |
+
+**Note:** All access is **read-only** — the agent can not create, update, or delete tickets.
+
+## Building and developing locally
+
+```bash
+npm install
+npm run build
+```
+
+Copy `.env.example` to `.env`, fill in `HIT_BASE_URL` and `HIT_API_TOKEN`, then run:
+
+```bash
+npm start
+```
+
+The server starts on stdio. Point your MCP client at the absolute path:
+
+```json
+{
+  "mcpServers": {
+    "hit": {
+      "command": "node",
+      "args": ["/path/to/hit-mcp/dist/index.js"],
+      "env": {
+        "HIT_BASE_URL": "https://support.example.com",
+        "HIT_API_TOKEN": "..."
+      }
+    }
+  }
+}
+```
