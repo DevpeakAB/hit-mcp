@@ -1,0 +1,41 @@
+stages:
+  - check
+  - publish
+
+default:
+  image: node:24-alpine
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+
+check:
+  stage: check
+  before_script:
+    - npm ci --ignore-scripts
+  script:
+    - npm run typecheck
+    - npm run build
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - when: on_success
+
+publish:
+  stage: publish
+  before_script:
+    - npm ci --ignore-scripts
+  script:
+    - npm run build
+    - PKG_VERSION="$(node -p "require('./package.json').version")"
+    - |
+      if [ "v${PKG_VERSION}" != "${CI_COMMIT_TAG}" ]; then
+        echo "Tag ${CI_COMMIT_TAG} does not match package.json version v${PKG_VERSION}"
+        exit 1
+      fi
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+    - npm publish --ignore-scripts
+  rules:
+    - if: $CI_COMMIT_TAG
